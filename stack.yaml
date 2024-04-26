@@ -1,0 +1,91 @@
+Resources:
+  ServerlessApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: serverless-api-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDBFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:*
+                Resource: "*"
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - logs:*
+                Resource: "*"
+
+  EmployeeDetailsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Empoloyee-Details
+      AttributeDefinitions:
+        - AttributeName: EmployeeID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: EmployeeID
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  GetEmployeeFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GetEmployeeFunction
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt ServerlessApiRole.Arn
+      Code:
+        S3Bucket: employeeS3
+        S3Key: lambda_functions/get_Student.zip
+      Runtime: python3.11
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Ref EmployeeDetailsTable
+
+  # Define other Lambda functions similarly for Create, Update, Delete operations
+
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: ServerlessApi
+
+  StudentResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: Student
+
+  StudentsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: Students
+
+  HealthResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: health
+
+  # Define API methods (GET, POST, etc.) and integrations with Lambda functions for each resource
+
+Outputs:
+  ApiGatewayEndpoint:
+    Description: "Endpoint URL of the API Gateway"
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

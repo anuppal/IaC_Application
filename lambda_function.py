@@ -1,12 +1,11 @@
 import json
 import boto3
 import logging
-from custom_encoder import CustomEncoder
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-dynamodbTableName='Employee-Details'
+dynamodbTableName = 'Employee-Details'
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(dynamodbTableName)
 
@@ -24,122 +23,100 @@ def lambda_handler(event, context):
     httpMethod = event['httpMethod']
     path = event['path']
     if httpMethod == getMethod and path == healthPath:
-        response = buildResponse(200)
-        
+        response = build_response(200)
     elif httpMethod == getMethod and path == employeePath:
-        response = getEmployee(event['queryStringParameters']['employeeID'])
+        response = get_employee(event['queryStringParameters']['employeeID'])
     elif httpMethod == getMethod and path == employeesPath:
-        response = getEmployees(event['queryStringParameters']['employeeID'])  
+        response = get_employees()
     elif httpMethod == postMethod and path == employeePath:
-        response = saveEmployee(json.loads(event['body']))       
+        response = save_employee(json.loads(event['body']))
     elif httpMethod == patchMethod and path == employeePath:
         requestBody = json.loads(event['body'])
-        response = modifyEmployee(requestBody['employeeID'],requestBody['updateKey'],requestBody['updateValue'])
+        response = modify_employee(requestBody['employeeID'], requestBody['updateKey'], requestBody['updateValue'])
     elif httpMethod == deleteMethod and path == employeePath:
         requestBody = json.loads(event['body'])
-        response = deleteMethods(requestBody['employeeID'])
+        response = delete_employee(requestBody['employeeID'])
     else:
-        response = buildResponse(404,'Not Found')
+        response = build_response(404, 'Not Found')
     return response
 
 
-def getEmployee(employeeID):
+def get_employee(employeeID):
     try:
         response = table.get_item(
-            key={
+            Key={
                 'employeeID': employeeID
             }
         )
-        if item in response:
-            return buildResponse(200, response('Item'))
+        item = response.get('Item')
+        if item:
+            return build_response(200, item)
         else:
-            return buildResponse(404, f'{{"Message {employeeID} Not found"}}')
-    except:
-        logger.exception{'Do your custom handling here. I am just gona log it out here '}
+            return build_response(404, {"Message": f"Employee with ID {employeeID} not found"})
+    except Exception as e:
+        logger.exception('Custom handling for exceptions here: %s', str(e))
+        return build_response(500, {"Message": "Internal Server Error"})
 
 
-def getEmployees():
+def get_employees():
     try:
         response = table.scan()
-        result = response['Item']
-
-        while 'LastEvalauatedkey' in response:
-            respnose = table.scan(ExclusiveStartKey=respnose['LastEvalauatedkey'])
-            result.extend(respnose['Item'])
-        
-        body={
-            'employees': result
-        }
-        return buildResponse(200, body)
+        items = response.get('Items', [])
+        return build_response(200, {"employees": items})
     except Exception as e:
-        # Exception handling
-        logger.exception("An error occurred: %s", str(e))
-        # Additional custom handling can be done here
+        logger.exception('Custom handling for exceptions here: %s', str(e))
+        return build_response(500, {"Message": "Internal Server Error"})
 
-def saveEmployee(requestBody):
+
+def save_employee(requestBody):
     try:
-        table.put_item(item=requestBody)
-        body={
-            'Operation':'SAVE',
-            'Message':'SUCCESS',
-            'Item': requestBody
-        }
-        return buildResponse(200, body)
+        table.put_item(Item=requestBody)
+        return build_response(200, {"Operation": "SAVE", "Message": "SUCCESS", "Item": requestBody})
     except Exception as e:
-        # Exception handling
-        logger.exception("An error occurred: %s", str(e))
-        # Additional custom handling can be done here
+        logger.exception('Custom handling for exceptions here: %s', str(e))
+        return build_response(500, {"Message": "Internal Server Error"})
 
-def modifyEmployee(employeeID,updateKey,updateValue):
+
+def modify_employee(employeeID, updateKey, updateValue):
     try:
-        response = table_update_item(
+        response = table.update_item(
             Key={
                 'employeeID': employeeID
             },
-            UpdateExpression = f'set {updateKey} = :value',
+            UpdateExpression=f"set {updateKey} = :value",
             ExpressionAttributeValues={
-                ':value':updateValue
+                ':value': updateValue
             },
             ReturnValues='UPDATED_NEW'
         )
-        body={
-            'Operation':'SAVE',
-            'Message':'SUCCESS',
-            'UpdatedAttributes': response
-        }
-        return buildResponse(200, body)
+        return build_response(200, {"Operation": "UPDATE", "Message": "SUCCESS", "UpdatedAttributes": response})
     except Exception as e:
-        # Exception handling
-        logger.exception("An error occurred: %s", str(e))
-        # Additional custom handling can be done here
+        logger.exception('Custom handling for exceptions here: %s', str(e))
+        return build_response(500, {"Message": "Internal Server Error"})
 
-def deleteMethods(employeeID):
+
+def delete_employee(employeeID):
     try:
         response = table.delete_item(
             Key={
                 'employeeID': employeeID
             },
-            ReturnValues='ALL_OLD'  # Corrected parameter name
+            ReturnValues='ALL_OLD'
         )
-        body = {
-            'Operation': 'DELETE',
-            'Message': 'SUCCESS',
-            'deleteItem': response
-        }
-        return buildResponse(200, body)
+        return build_response(200, {"Operation": "DELETE", "Message": "SUCCESS", "DeletedItem": response})
     except Exception as e:
-        logger.exception("An error occurred: %s", str(e))
+        logger.exception('Custom handling for exceptions here: %s', str(e))
+        return build_response(500, {"Message": "Internal Server Error"})
 
 
-
-def buildResponse(statusCode,body=None):
+def build_response(statusCode, body=None):
     response = {
-        'statusCode':statusCode,
-        'headers':{
-            'content-type':'application/json',
-            'Access-Control-Allow-Origin':'*'
+        'statusCode': statusCode,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
         }
     }
     if body is not None:
-        response['body']= json.dumps(body)
-        return response
+        response['body'] = json.dumps(body)
+    return response

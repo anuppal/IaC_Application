@@ -1,0 +1,37 @@
+---
+Metadata:
+  TemplateId: "arn:aws:cloudformation:ap-south-1:123630172817:generatedTemplate/f64a6351-9761-4bde-9921-cf2623e1e3b9"
+Resources:
+  ApiGatewayDeployment00lwucbj00oQBvl:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::ApiGateway::Deployment"
+    DeletionPolicy: "Retain"
+    Properties:
+      RestApiId:
+        Ref: "ApiGatewayRestApi00gewrfiuedk00w08uy"
+  ApiGatewayRestApi00gewrfiuedk00w08uy:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::ApiGateway::RestApi"
+    DeletionPolicy: "Retain"
+    Properties:
+      ApiKeySourceType: "HEADER"
+      EndpointConfiguration:
+        Types:
+        - "REGIONAL"
+      DisableExecuteApiEndpoint: false
+      Name: "serverless-api"
+  ApiGatewayStage00empProd00EFGo0:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::ApiGateway::Stage"
+    DeletionPolicy: "Retain"
+    Properties:
+      RestApiId:
+        Ref: "ApiGatewayRestApi00gewrfiuedk00w08uy"
+      DeploymentId:
+        Fn::GetAtt:
+        - "ApiGatewayDeployment00lwucbj00oQBvl"
+        - "DeploymentId"
+      StageName: "empProd"
+      CacheClusterSize: "0.5"
+      TracingEnabled: false
+      CacheClusterEnabled: false
