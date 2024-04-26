@@ -10,33 +10,7 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
-      Policies:
-        - PolicyName: DynamoDBFullAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: dynamodb:*
-                Resource: "*"
-        - PolicyName: CloudWatchFullAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: 
-                  - logs:*
-                Resource: "*"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+        - "arn:aws:iam::aws:policy/CloudWatchFullAccess"
 
-  EmployeeDetailsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: Empoloyee-Details
-      AttributeDefinitions:
-        - AttributeName: EmployeeID
-          AttributeType: S
-      KeySchema:
-        - AttributeName: EmployeeID
-          KeyType: HASH
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
